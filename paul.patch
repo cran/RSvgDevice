@@ -1,0 +1,117 @@
+161c161
+< 			 int col, int fill, double gamma, int lty, double lwd,
+---
+> 			 R_GE_gcontext *gc,
+168c168
+< 		       int col, double gamma, int lty, double lwd,
+---
+> 		       R_GE_gcontext *gc,
+172c172
+< static void   SVG_NewPage(int fill, double gamma, NewDevDesc *dd);
+---
+> static void   SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd);
+175c175
+< 			  int col, int fill, double gamma, int lty, double lwd,
+---
+> 			  R_GE_gcontext *gc,
+178c178
+< 			   int col, double gamma, int lty, double lwd,
+---
+> 			   R_GE_gcontext *gc,
+181c181
+< 		       int col, int fill, double gamma, int lty, double lwd,
+---
+> 		       R_GE_gcontext *gc,
+190,191c190,192
+< static double SVG_StrWidth(char *str, int font,
+< 			   double cex, double ps, NewDevDesc *dd);
+---
+> static double SVG_StrWidth(char *str,
+> 			   R_GE_gcontext *gc,
+> 			   NewDevDesc *dd);
+194c195
+< 		       int col, double gamma, int font, double cex, double ps,
+---
+> 		       R_GE_gcontext *gc,
+196c197,198
+< static void   SVG_MetricInfo(int c, int font, double cex, double ps,
+---
+> static void   SVG_MetricInfo(int c,
+> 			     R_GE_gcontext *gc,
+352c354,355
+< static void SVG_MetricInfo(int c, int font, double cex, double ps,
+---
+> static void SVG_MetricInfo(int c,
+> 			   R_GE_gcontext *gc,
+423c426,427
+< static void SVG_NewPage(int fill, double gamma, NewDevDesc *dd)
+---
+> static void SVG_NewPage(R_GE_gcontext *gc,
+> 			NewDevDesc *dd)
+467c471
+< 		     int col, double gamma, int lty, double lwd,
+---
+> 		     R_GE_gcontext *gc,
+478c482
+<   SetLinetype(lty, lwd, dd, NA_INTEGER,col);	
+---
+>   SetLinetype(gc->lty, gc->lwd, dd, NA_INTEGER, gc->col);	
+483c487
+< 			 int col, double gamma, int lty, double lwd,
+---
+> 			 R_GE_gcontext *gc,
+495c499
+<   SetLinetype(lty, lwd, dd,NA_INTEGER,col);
+---
+>   SetLinetype(gc->lty, gc->lwd, dd, NA_INTEGER, gc->col);
+503,504c507,509
+< static double SVG_StrWidth(char *str, int font,
+< 			   double cex, double ps, NewDevDesc *dd)
+---
+> static double SVG_StrWidth(char *str,
+> 			   R_GE_gcontext *gc,
+> 			   NewDevDesc *dd)
+511c516
+<     size =  cex * ps + 0.5;
+---
+>     size =  gc->cex * gc->ps + 0.5;
+513a519,521
+>     /*
+>      * FIXME:  need to update ptd->fontface from gc->fontface ???
+>      */
+523c531
+< 		     int col, int fill, double gamma, int lty, double lwd,
+---
+> 		     R_GE_gcontext *gc,
+547c555
+<   SetLinetype(lty, lwd, dd, fill, col);
+---
+>   SetLinetype(gc->lty, gc->lwd, dd, gc->fill, gc->col);
+552c560
+< 		       int col, int fill, double gamma, int lty, double lwd,
+---
+> 		       R_GE_gcontext *gc,
+562c570
+<   SetLinetype(lty, lwd, dd, fill, col);
+---
+>   SetLinetype(gc->lty, gc->lwd, dd, gc->fill, gc->col);
+569c577
+< 			int col, int fill, double gamma, int lty, double lwd,
+---
+> 			R_GE_gcontext *gc,
+585c593
+<   SetLinetype(lty, lwd, dd, fill, col);
+---
+>   SetLinetype(gc->lty, gc->lwd, dd, gc->fill, gc->col);
+609c617
+< 		     int col, double gamma, int font, double cex, double ps,
+---
+> 		     R_GE_gcontext *gc,
+616c624
+<   size = cex * ps + 0.5;
+---
+>   size = gc->cex * gc->ps + 0.5;
+624c632
+<   SetFont(font, size, ptd);
+---
+>   SetFont(gc->fontface, size, ptd);

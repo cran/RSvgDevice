@@ -1,7 +1,7 @@
 \name{devSVG}
 \title{A SVG Graphics Driver}
 \usage{
-devSVG(file = "Rplots.svg", width = 5, height = 4,
+devSVG(file = "Rplots.svg", width = 10, height = 8,
        bg = "white", fg = "black", onefile=TRUE, xmlHeader=TRUE)
 }
 \alias{devSVG}

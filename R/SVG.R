@@ -1,12 +1,11 @@
 devSVG <- function (file = "Rplots.svg", width = 10, height = 8, 
     bg = "white", fg = "black", onefile = TRUE, xmlHeader = TRUE)
 {
-      dev <- .C("do_SVG", as.character(file),
-	     as.character(bg),as.character(fg), 
+      dev <- .Call("do_SVG", as.character(file), bg, fg,
 	     as.double(width),as.double(height),
-             as.logical(FALSE), as.logical(xmlHeader),
-	     as.logical(onefile)
-             )
+             FALSE, as.logical(xmlHeader),
+	     as.logical(onefile),
+             PACKAGE="RSvgDevice")
 
       invisible(dev)
 }
