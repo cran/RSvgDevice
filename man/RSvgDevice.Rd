@@ -18,13 +18,13 @@ devSVG(file = "Rplots.svg", width = 10, height = 8,
   This function produces graphics suitable teh current w3 svg XML standard
 }
 \details{
-  This driver currently does not have any font metric information, 
+  This driver currently does not have any font metric information,
   so the use of \code{\link{plotmath}} is not supported.
 
   The driver output is currently NOT specifying a DOCTYPE DTD
 }
 \references{
-  www Consortum  
+  www Consortum
   \emph{W3C Scalable Vector Graphics (SVG)}
   http://www.w3.org/Graphics/SVG/Overview.htm8
 }

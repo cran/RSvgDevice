@@ -26,17 +26,17 @@
 #define END_SUSPEND_INTERRUPTS
 #include "R.h"
 #include "Rmath.h"
+#include "Rversion.h"
 
 #include "Rinternals.h"
 #include "Rgraphics.h"
-#include "Rdevices.h"
 #include "R_ext/GraphicsDevice.h"
 #include "R_ext/GraphicsEngine.h"
 
-	/* device-specific information per SVG device */
+        /* device-specific information per SVG device */
 
-#define DOTSperIN	72.27
-#define in2dots(x) 	(DOTSperIN * x)
+#define DOTSperIN       72.27
+#define in2dots(x)      (DOTSperIN * x)
 
 typedef struct {
   FILE *texfp;
@@ -63,12 +63,12 @@ typedef struct {
   int fontface;
   Rboolean debug;
   Rboolean xmlHeader;
-  Rboolean onefile;	/* drop headers etc*/
+  Rboolean onefile;     /* drop headers etc*/
 
 } SVGDesc;
 
 
-	/* Global device information */
+        /* Global device information */
 
 static double charwidth[4][128] = {
 {
@@ -159,43 +159,46 @@ static double charwidth[4][128] = {
 
 static void   SVG_Activate(NewDevDesc *);
 static void   SVG_Circle(double x, double y, double r,
-			 R_GE_gcontext *gc,
-			 NewDevDesc *dd);
+                         R_GE_gcontext *gc,
+                         NewDevDesc *dd);
 static void   SVG_Clip(double, double, double, double, NewDevDesc*);
 static void   SVG_Close(NewDevDesc*);
 static void   SVG_Deactivate(NewDevDesc *);
 static void   SVG_Hold(NewDevDesc*);
 static void   SVG_Line(double x1, double y1, double x2, double y2,
-		       R_GE_gcontext *gc,
-		       NewDevDesc *dd);
+                       R_GE_gcontext *gc,
+                       NewDevDesc *dd);
 static Rboolean SVG_Locator(double*, double*, NewDevDesc*);
 static void   SVG_Mode(int, NewDevDesc*);
 static void   SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd);
 static Rboolean SVG_Open(NewDevDesc*, SVGDesc*);
-static void   SVG_Polygon(int n, double *x, double *y, 
-			  R_GE_gcontext *gc,
-			  NewDevDesc *dd);
-static void   SVG_Polyline(int n, double *x, double *y, 
-			   R_GE_gcontext *gc,
-			   NewDevDesc *dd);
+static void   SVG_Polygon(int n, double *x, double *y,
+                          R_GE_gcontext *gc,
+                          NewDevDesc *dd);
+static void   SVG_Polyline(int n, double *x, double *y,
+                           R_GE_gcontext *gc,
+                           NewDevDesc *dd);
 static void   SVG_Rect(double x0, double y0, double x1, double y1,
-		       R_GE_gcontext *gc,
-		       NewDevDesc *dd);
+                       R_GE_gcontext *gc,
+                       NewDevDesc *dd);
 static void   SVG_Size(double *left, double *right,
-		       double *bottom, double *top,
-		       NewDevDesc *dd);
+                       double *bottom, double *top,
+                       NewDevDesc *dd);
 
+static void   SVG_Resize(double *left, double *right,
+                         double *bottom, double *top,
+                         NewDevDesc *dd);
 static double SVG_StrWidth(char *str,
-			   R_GE_gcontext *gc,
-			   NewDevDesc *dd);
-static void   SVG_Text(double x, double y, char *str, 
-		       double rot, double hadj, 
-		       R_GE_gcontext *gc,
-		       NewDevDesc *dd);
+                           R_GE_gcontext *gc,
+                           NewDevDesc *dd);
+static void   SVG_Text(double x, double y, char *str,
+                       double rot, double hadj,
+                       R_GE_gcontext *gc,
+                       NewDevDesc *dd);
 static void   SVG_MetricInfo(int c,
-			     R_GE_gcontext *gc,
-			     double* ascent, double* descent,
-			     double* width, NewDevDesc *dd);
+                             R_GE_gcontext *gc,
+                             double* ascent, double* descent,
+                             double* width, NewDevDesc *dd);
 
 /* Support routines */
 
@@ -206,7 +209,7 @@ char *col2RGBname(unsigned int col)
 {
   MyColBuf[0] = '#';
   MyColBuf[1] = HexDigits[(col >>  4) & 15];
-  MyColBuf[2] = HexDigits[(col	    ) & 15];
+  MyColBuf[2] = HexDigits[(col      ) & 15];
   MyColBuf[3] = HexDigits[(col >> 12) & 15];
   MyColBuf[4] = HexDigits[(col >>  8) & 15];
   MyColBuf[5] = HexDigits[(col >> 20) & 15];
@@ -224,7 +227,7 @@ static void SVG_Size(double *left, double *right,
      *right = dd->right;
      *bottom = dd->bottom;
      *top = dd->top;
-} 
+}
 
 /*Get Device point from user point*/
 /*void GetSvgDevicePoint(double x, double y)
@@ -234,7 +237,7 @@ static void SVG_Size(double *left, double *right,
    x = toDeviceX(x,
    GConvert(x, y, GE_NDC, GE_DEVICE, dd);
    }
-*/ 
+*/
 /*Get User Point from device point*/
 /*void GetSvgUserPoint(double x, double y)
 {
@@ -247,14 +250,14 @@ static void SVG_Size(double *left, double *right,
 /*void GetSvgDevicePoints(double *x, double *y, int *n)
 {
   int i;
-  
+
   GEDevDesc *dd = GEcurrentDevice();
 
   for(i = 0; i < *n; i++){
     GConvert(x+i,y+i, GE_NDC, DEVICE, dd);
   }
 }
-*/  
+*/
 /*Get Device Boundries i.e. Width & Height*/
   /*void GetSvgDeviceBoundry(double *w, double *h)
 {
@@ -266,53 +269,74 @@ static void SVG_Size(double *left, double *right,
 }
 */
 static void SetLinetype(int newlty, int newlwd, NewDevDesc *dd, int
-			fgcol, int col)
+                        fgcol, int col)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-  
+
   int code;
+  double fillop, strokeop;
   ptd->lty = newlty;
   ptd->lwd = newlwd;
 
-  /* code is set as follows */
-  /* code == 0, nothing to draw */
-  /* code == 1, outline only */
-  /* code == 2, fill only */
-  /* code == 3, outline and fill */
-  
-  code = 2 * (R_ALPHA(fgcol) == 0) + (R_ALPHA(col) == 0);
-
   /*Set line size + color*/
   fprintf(ptd->texfp,"style=\"stroke-width:%d;",newlwd);
-  
 
-  /*  fprintf(ptd->texfp,"stroke-width:%d;stroke:%s",
-  	  newlwd,col2RGBname(col));
-  */
-  if(code == 0){
-    
-    fprintf(ptd->texfp,"stroke:%s","none");
-    fprintf(ptd->texfp,";fill:%s","none");
-  }else if( code == 1){
-    fprintf(ptd->texfp,"stroke:%s",col2RGBname(col));
-    fprintf(ptd->texfp,";fill:%s","none");
-  }else if( code == 2){
-    fprintf(ptd->texfp,"stroke:%s",col2RGBname(fgcol));
-    fprintf(ptd->texfp,";fill:%s",col2RGBname(fgcol));
-  }else if(code == 3){
-    fprintf(ptd->texfp,"stroke:%s",col2RGBname(col));
-    fprintf(ptd->texfp,";fill:%s",col2RGBname(fgcol));
-  }
-  
- 
-  /*Set fill color
-  fprintf(ptd->texfp,";fill:");
-  if(fgcol != NA_INTEGER){
-    fprintf(ptd->texfp,"%s",col2RGBname(fgcol));
+  if (R_VERSION < R_Version(2,0,0)) {
+    /* Old type alpha channels, 0 means opaque */
+
+    /* code is set as follows */
+    /* code == 0, nothing to draw */
+    /* code == 1, outline only */
+    /* code == 2, fill only */
+    /* code == 3, outline and fill */
+
+    code = 2 * (R_ALPHA(fgcol) == 0) + (R_ALPHA(col) == 0);
+
+
+    /*  fprintf(ptd->texfp,"stroke-width:%d;stroke:%s",
+        newlwd,col2RGBname(col));
+    */
+    if(code == 0){
+
+      fprintf(ptd->texfp,"stroke:%s","none");
+      fprintf(ptd->texfp,";fill:%s","none");
+    }else if( code == 1){
+      fprintf(ptd->texfp,"stroke:%s",col2RGBname(col));
+      fprintf(ptd->texfp,";fill:%s","none");
+    }else if( code == 2){
+      fprintf(ptd->texfp,"stroke:%s",col2RGBname(fgcol));
+      fprintf(ptd->texfp,";fill:%s",col2RGBname(fgcol));
+    }else if(code == 3){
+      fprintf(ptd->texfp,"stroke:%s",col2RGBname(col));
+      fprintf(ptd->texfp,";fill:%s",col2RGBname(fgcol));
+    }
+
+
+    /*Set fill color
+      fprintf(ptd->texfp,";fill:");
+      if(fgcol != NA_INTEGER){
+      fprintf(ptd->texfp,"%s",col2RGBname(fgcol));
+      } else {
+      fprintf(ptd->texfp,"none");
+      }
+    */
   } else {
-    fprintf(ptd->texfp,"none");
-  }
-  */
+    /* As of R 2.0.0, the coding of alpha channels changed,
+       R handles transparency properly. Well, almost. For some
+       misterious reasons the highest bit of the alpha channel is always
+       1, probably because the sign of int. (?) For now we simply mask
+       out this bit. 2004/11/25 Gabor Csardi. */
+
+
+    strokeop=((double)((col>>24)&127))/127;
+    fillop=((double)((fgcol>>24)&127))/127;
+    fprintf(ptd->texfp,"stroke:%s",col2RGBname(col));
+    fprintf(ptd->texfp,";fill:%s",col2RGBname(fgcol));
+    fprintf(ptd->texfp,";stroke-opacity:%f", strokeop);
+    fprintf(ptd->texfp,";fill-opacity:%f", fillop);
+
+  } /* if R_VERSION < 2.0.0 */
+
   /*Set line pattern type*/
   if (ptd->lty) {
     /*Need to support other types of lines*/
@@ -321,24 +345,24 @@ static void SetLinetype(int newlty, int newlwd, NewDevDesc *dd, int
       fprintf(ptd->texfp,";stroke-dasharray");
       break;
     }
-    
+
   }
-  
+
   fprintf(ptd->texfp,"\"");
 }
 
-    
+
 static void SetFont(int face, int size, SVGDesc *ptd)
 {
     int lface=face, lsize= size;
     if(lface < 1 || lface > 4) lface = 1;
     if(lsize < 1 || lsize > 24) lsize = 10;
-    
+
     fprintf(ptd->texfp, " style=\"font-size:%d\" ",
       lsize);
     ptd->fontsize = lsize;
     ptd->fontface = lface;
-    
+
 }
 
 static void SVG_Activate(NewDevDesc *dd)
@@ -350,9 +374,9 @@ static void SVG_Deactivate(NewDevDesc *dd)
 }
 
 static void SVG_MetricInfo(int c,
-			   R_GE_gcontext *gc,
-			   double* ascent, double* descent,
-			   double* width, NewDevDesc *dd)
+                           R_GE_gcontext *gc,
+                           double* ascent, double* descent,
+                           double* width, NewDevDesc *dd)
 {
   /* metric information not available => return 0,0,0 */
   *ascent  = 0.0;
@@ -367,40 +391,49 @@ static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
   ptd->fontsize = 0;
   ptd->fontface = 0;
   ptd->debug = FALSE;
-  
+
   ptd->fg = dd->startcol;
   ptd->bg = dd->startfill;
   ptd->col = ptd->fg;
-  
-  if (!(ptd->texfp = fopen(R_ExpandFileName(ptd->filename), "w")))
+
+  if (!((int)(ptd->texfp) = R_fopen(R_ExpandFileName(ptd->filename), "w")))
     return FALSE;
-  
+
   if(ptd->xmlHeader)
     fprintf(ptd->texfp,"<?xml version=\"1.0\" standalone=\"yes\"?>\n");
-  
+
   fprintf(ptd->texfp,"<svg width=\"%.2f\" height=\"%.2f\" ",
-	  in2dots(ptd->width), in2dots(ptd->height));
+          in2dots(ptd->width), in2dots(ptd->height));
   fprintf(ptd->texfp,"viewBox=\"0,0,%.2f,%.2f\">\n",
-	  in2dots(ptd->width), in2dots(ptd->height));
-  
+          in2dots(ptd->width), in2dots(ptd->height));
+
   fprintf(ptd->texfp,"<desc>R SVG Plot!</desc>\n");
-  
+
   fprintf(ptd->texfp,
-	  "<rect width=\"100%%\" height=\"100%%\" style=\"fill:%s\"/>\n",
-	  col2RGBname(ptd->bg));
-  
+          "<rect width=\"100%%\" height=\"100%%\" style=\"fill:%s\"/>\n",
+          col2RGBname(ptd->bg));
+
   /* ensure that line drawing is set up at the first */
   /* graphics call */
   ptd->lty = -1;
   ptd->lwd = -1;
-  
+
   ptd->pageno++;
   return TRUE;
 }
 
 
+/* Interactive Resize */
+
+static void SVG_Resize(double *left, double *right,
+                       double *bottom, double *top,
+                       NewDevDesc *dd)
+{
+
+}
+
 static void SVG_Clip(double x0, double x1, double y0, double y1,
-		     NewDevDesc *dd)
+                     NewDevDesc *dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -410,29 +443,28 @@ static void SVG_Clip(double x0, double x1, double y0, double y1,
     ptd->cliptop = y1;
 }
 
-	/* Start a new page */
+        /* Start a new page */
 
-static void SVG_NewPage(R_GE_gcontext *gc,
-			NewDevDesc *dd)
+static void SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
     int face, size;
-    
+
     if(ptd->onefile){
-    
+
     }else if (ptd->pageno) {
 
       fprintf(ptd->texfp,"</svg>\n");
       if(ptd->xmlHeader)
-	fprintf(ptd->texfp,"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n");
+        fprintf(ptd->texfp,"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n");
       fprintf(ptd->texfp,"<svg width=\"%.2f\" height=\"%.2f\" ",
-	    in2dots(ptd->width), in2dots(ptd->height));
+            in2dots(ptd->width), in2dots(ptd->height));
       fprintf(ptd->texfp,"viewBox=\"0,0,%.2f,%.2f\">\n",
-	    in2dots(ptd->width), in2dots(ptd->height));
+            in2dots(ptd->width), in2dots(ptd->height));
       fprintf(ptd->texfp,"<desc>R SVG Plot!</desc>\n");
       ptd->pageno++;
-      
+
     }else ptd->pageno++;
 
     face = ptd->fontface;
@@ -446,47 +478,47 @@ static void SVG_NewPage(R_GE_gcontext *gc,
 
 static void SVG_Close(NewDevDesc *dd)
 {
-	SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
+        SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
-	fprintf(ptd->texfp, "</svg>\n");
-	
-	fclose(ptd->texfp);
+        fprintf(ptd->texfp, "</svg>\n");
 
-	free(ptd);
+        fclose(ptd->texfp);
+
+        free(ptd);
 }
 
 
 static void SVG_Line(double x1, double y1, double x2, double y2,
-		     R_GE_gcontext *gc,
-		     NewDevDesc *dd)
+                     R_GE_gcontext *gc,
+                     NewDevDesc *dd)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-     
+
   fprintf(ptd->texfp, "<line x1=\"%.2f\" y1=\"%.2f\" x2=\"%.2f\" ",
-	  x1, y1, x2);
-  
+          x1, y1, x2);
+
   fprintf(ptd->texfp, "y2=\"%.2f\" ",
-	    y2);
-  
-  SetLinetype(gc->lty, gc->lwd, dd, NA_INTEGER, gc->col);	
+            y2);
+
+  SetLinetype(gc->lty, gc->lwd, dd, NA_INTEGER, gc->col);
   fprintf(ptd->texfp, "/>\n");
 }
 
-static void SVG_Polyline(int n, double *x, double *y, 
-			 R_GE_gcontext *gc,
-			 NewDevDesc *dd)
+static void SVG_Polyline(int n, double *x, double *y,
+                         R_GE_gcontext *gc,
+                         NewDevDesc *dd)
 {
   int i;
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-  fprintf(ptd->texfp,"<polyline points=\""); 
-  
+  fprintf(ptd->texfp,"<polyline points=\"");
+
   for (i=0; i<n; i++) {
     fprintf(ptd->texfp,"%.2f , %.2f ",x[i],y[i]);
   }
   fprintf(ptd->texfp,"\" ");
-    
-  SetLinetype(gc->lty, gc->lwd, dd, NA_INTEGER, gc->col);
-  
+
+  SetLinetype(gc->lty, gc->lwd, dd,NA_INTEGER,gc->col);
+
   fprintf(ptd->texfp, "/>\n");
 }
 
@@ -494,8 +526,8 @@ static void SVG_Polyline(int n, double *x, double *y,
 /* For the current font in pointsize fontsize */
 
 static double SVG_StrWidth(char *str,
-			   R_GE_gcontext *gc,
-			   NewDevDesc *dd)
+                           R_GE_gcontext *gc,
+                           NewDevDesc *dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -505,9 +537,6 @@ static double SVG_StrWidth(char *str,
     size =  gc->cex * gc->ps + 0.5;
     /*SetFont(font, size, ptd);*/
     sum = 0;
-    /*
-     * FIXME:  need to update ptd->fontface from gc->fontface ???
-     */
     for(p=str ; *p ; p++)
       sum += charwidth[ptd->fontface][(int)*p];
 
@@ -517,12 +546,12 @@ static double SVG_StrWidth(char *str,
 
 /* Possibly Filled Rectangle */
 static void SVG_Rect(double x0, double y0, double x1, double y1,
-		     R_GE_gcontext *gc,
-		     NewDevDesc *dd)
+                     R_GE_gcontext *gc,
+                     NewDevDesc *dd)
 {
   double tmp;
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-  
+
   /*Make sure width and height are positive*/
   if(x0 >= x1){
     tmp = x0;
@@ -535,10 +564,10 @@ static void SVG_Rect(double x0, double y0, double x1, double y1,
     y0 = y1;
     y1 = tmp;
   }
-  
+
   fprintf(ptd->texfp,
-	  "<rect x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" ",
-	  x0,y0,x1-x0,y1-y0);
+          "<rect x=\"%.2f\" y=\"%.2f\" width=\"%.2f\" height=\"%.2f\" ",
+          x0,y0,x1-x0,y1-y0);
 
 
   SetLinetype(gc->lty, gc->lwd, dd, gc->fill, gc->col);
@@ -546,33 +575,33 @@ static void SVG_Rect(double x0, double y0, double x1, double y1,
 }
 
 static void SVG_Circle(double x, double y, double r,
-		       R_GE_gcontext *gc,
-		       NewDevDesc *dd)
+                       R_GE_gcontext *gc,
+                       NewDevDesc *dd)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-  
-  
+
+
   fprintf(ptd->texfp,
-	  "<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ",
-	  x,y,r*1.5);
-  
+          "<circle cx=\"%.2f\" cy=\"%.2f\" r=\"%.2f\" ",
+          x,y,r*1.5);
+
   SetLinetype(gc->lty, gc->lwd, dd, gc->fill, gc->col);
-  
+
   fprintf(ptd->texfp," />\n");
 
 }
 
-static void SVG_Polygon(int n, double *x, double *y, 
-			R_GE_gcontext *gc,
-			NewDevDesc *dd)
+static void SVG_Polygon(int n, double *x, double *y,
+                        R_GE_gcontext *gc,
+                        NewDevDesc *dd)
 {
   int i;
-  
+
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
 
-  fprintf(ptd->texfp,"<polygon points=\""); 
-  
+  fprintf(ptd->texfp,"<polygon points=\"");
+
   for (i=0; i<n; i++) {
     fprintf(ptd->texfp,"%.2f , %.2f ",x[i],y[i]);
   }
@@ -601,29 +630,29 @@ static void textext(char *str, SVGDesc *ptd)
 
 /* Rotated Text */
 
-static void SVG_Text(double x, double y, char *str, 
-		     double rot, double hadj, 
-		     R_GE_gcontext *gc,
-		     NewDevDesc *dd)
+static void SVG_Text(double x, double y, char *str,
+                     double rot, double hadj,
+                     R_GE_gcontext *gc,
+                     NewDevDesc *dd)
 {
   int size;
 
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-  
+
   size = gc->cex * gc->ps + 0.5;
-  
+
   fprintf(ptd->texfp,"<text transform=\"translate(%.2f,%.2f) ",x,y);
   if(rot != 0)
     fprintf(ptd->texfp," rotate(%0.0f)\" ",-1.0*rot);
   else
     fprintf(ptd->texfp,"\" ");
-  
+
   SetFont(gc->fontface, size, ptd);
-  
+
   fprintf(ptd->texfp,">");
 
   textext(str, ptd);
-  
+
   fprintf(ptd->texfp,"</text>\n");
 }
 
@@ -644,26 +673,26 @@ static void SVG_Hold(NewDevDesc *dd)
 {
 }
 
-Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, SEXP bg, SEXP fg,
-			 double width, double height, Rboolean debug, 
-			 Rboolean xmlHeader, Rboolean onefile)
+Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
+                         double width, double height, Rboolean debug,
+                         Rboolean xmlHeader, Rboolean onefile)
 {
     SVGDesc *ptd;
 
     if (!(ptd = (SVGDesc *) malloc(sizeof(SVGDesc))))
-	return FALSE;
+        return FALSE;
 
     strcpy(ptd->filename, filename);
-    
-    dd->startfill = RGBpar(bg, 0);
-    dd->startcol = RGBpar(fg, 0);
+
+    dd->startfill = Rf_str2col(bg);
+    dd->startcol = Rf_str2col(fg);
     dd->startps = 10;
     dd->startlty = 0;
     dd->startfont = 1;
     dd->startgamma = 1;
 
     dd->newDevStruct = 1;
-    
+
     dd->activate = SVG_Activate;
     dd->deactivate = SVG_Deactivate;
     dd->open = SVG_Open;
@@ -685,23 +714,23 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, SEXP bg, SEXP fg,
 
     /* Screen Dimensions in Pixels */
 
-    dd->left = 0;		/* left */
+    dd->left = 0;               /* left */
     dd->right = in2dots(width);/* right */
-    dd->bottom = in2dots(height);		/* bottom */
+    dd->bottom = in2dots(height);               /* bottom */
     dd->top = 0;  /* top */
     ptd->width = width;
     ptd->height = height;
     ptd->xmlHeader = xmlHeader;
     ptd->onefile   = onefile;
 
-    if( ! SVG_Open(dd, ptd) ) 
-	return FALSE;
+    if( ! SVG_Open(dd, ptd) )
+        return FALSE;
 
     /* Base Pointsize */
     /* Nominal Character Sizes in Pixels */
 
-    dd->cra[0] =	 (6.0/12.0) * 10.0;
-    dd->cra[1] =	(10.0/12.0) * 10.0;
+    dd->cra[0] =         (6.0/12.0) * 10.0;
+    dd->cra[1] =        (10.0/12.0) * 10.0;
 
     /* Character Addressing Offsets */
     /* These offsets should center a single */
@@ -727,15 +756,15 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, SEXP bg, SEXP fg,
     ptd->lty = 1;
     ptd->pageno = 0;
     ptd->debug = debug;
-    
+
     dd->deviceSpecific = (void *) ptd;
     dd->displayListOn = FALSE;
     return TRUE;
 }
 
-static  GEDevDesc *RSvgDevice(char *file, SEXP bg, SEXP fg,
-			      double *width, double *height, int *debug, 
-			      int *xmlHeader, int *onefile)
+static  GEDevDesc *RSvgDevice(char **file, char **bg, char **fg,
+                              double *width, double *height, int *debug,
+                              int *xmlHeader, int *onefile)
 {
     GEDevDesc *dd;
     NewDevDesc *dev;
@@ -744,40 +773,36 @@ static  GEDevDesc *RSvgDevice(char *file, SEXP bg, SEXP fg,
 
     R_CheckDeviceAvailable();
     BEGIN_SUSPEND_INTERRUPTS {
-	if (!(dev = (NewDevDesc *) Calloc(1,NewDevDesc)))
-	    return 0;
-	/* Do this for early redraw attempts */
-	dev->displayList = R_NilValue;
-	
-	if(!SVGDeviceDriver(dev, file, bg, fg, width[0], height[0], debug[0],xmlHeader[0],onefile[0])) {
-	    free(dev);
-	    error("unable to start device SVG");
-	}
-	gsetVar(install(".Device"), mkString("devSVG"), R_NilValue);
-	dd = GEcreateDevDesc(dev);
+        if (!(dev = (NewDevDesc *) Calloc(1,NewDevDesc)))
+            return;
+        /* Do this for early redraw attempts */
+        dev->displayList = R_NilValue;
+
+        if(!SVGDeviceDriver(dev, file[0], bg[0], fg[0], width[0], height[0], debug[0],xmlHeader[0],onefile[0])) {
+            free(dev);
+            error("unable to start device SVG");
+        }
+        gsetVar(install(".Device"), mkString("devSVG"), R_NilValue);
+        dd = GEcreateDevDesc(dev);
         dd->newDevStruct = 1;
-	Rf_addDevice((DevDesc*) dd);
-	GEinitDisplayList(dd);
-	
+        Rf_addDevice((DevDesc*) dd);
+        GEinitDisplayList(dd);
+
     } END_SUSPEND_INTERRUPTS;
-    
+
     return(dd);
 }
 
-SEXP do_SVG(SEXP file, SEXP bg, SEXP fg, SEXP width, SEXP height,
-	    SEXP debug, SEXP xmlHeader, SEXP onefile)
+void do_SVG(char **file, char **bg, char **fg, double *width, double *height,
+            int *debug, int *xmlHeader, int *onefile)
 {
   char *vmax;
 
   vmax = vmaxget();
-  
-  RSvgDevice(CHAR(STRING_ELT(file, 0)), bg, fg,
-	     REAL(width), REAL(height), 
-	     INTEGER(debug), INTEGER(xmlHeader), 
-	     INTEGER(onefile));
-  
+
+  RSvgDevice(file, bg, fg, width, height, debug, xmlHeader, onefile);
+
   vmaxset(vmax);
-  return R_NilValue;
 }
 
 
