@@ -180,6 +180,9 @@ static void   SVG_Polyline(int n, double *x, double *y,
 static void   SVG_Rect(double x0, double y0, double x1, double y1,
 		       int col, int fill, double gamma, int lty, double lwd,
 		       NewDevDesc *dd);
+static void   SVG_Size(double *left, double *right,
+		       double *bottom, double *top,
+		       NewDevDesc *dd);
 
 static void   SVG_Resize(double *left, double *right,
 			 double *bottom, double *top,
@@ -211,6 +214,17 @@ char *col2RGBname(unsigned int col)
   MyColBuf[7] = '\0';
   return &MyColBuf[0];
 }
+
+/*Thanks Paul*/
+static void SVG_Size(double *left, double *right,
+                     double *bottom, double *top,
+                     NewDevDesc *dd)
+{
+     *left = dd->left;
+     *right = dd->right;
+     *bottom = dd->bottom;
+     *top = dd->top;
+} 
 
 /*Get Device point from user point*/
 /*void GetSvgDevicePoint(double x, double y)
@@ -390,6 +404,7 @@ static void SVG_Resize(double *left, double *right,
 		       double *bottom, double *top,
 		       NewDevDesc *dd)
 {
+  
 }
 
 static void SVG_Clip(double x0, double x1, double y0, double y1,
@@ -657,7 +672,7 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
     dd->open = SVG_Open;
     dd->close = SVG_Close;
     dd->clip = SVG_Clip;
-    dd->size = SVG_Resize;
+    dd->size = SVG_Size;
     dd->newPage = SVG_NewPage;
     dd->line = SVG_Line;
     dd->text = SVG_Text;
