@@ -33,7 +33,7 @@
 #include "R_ext/GraphicsDevice.h"
 #include "R_ext/GraphicsEngine.h"
 
-        /* device-specific information per SVG device */
+/* device-specific information per SVG device */
 
 #define DOTSperIN       72.27
 #define in2dots(x)      (DOTSperIN * x)
@@ -396,13 +396,13 @@ static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
   ptd->bg = dd->startfill;
   ptd->col = ptd->fg;
 
-  if (!((int)(ptd->texfp) = R_fopen(R_ExpandFileName(ptd->filename), "w")))
+  if (!( ptd->texfp = (FILE *)R_fopen(R_ExpandFileName(ptd->filename), "w") ))
     return FALSE;
 
   if(ptd->xmlHeader)
-    fprintf(ptd->texfp,"<?xml version=\"1.0\" standalone=\"yes\"?>\n");
+    fprintf(ptd->texfp,"<?xml version=\"1.0\"?>\n");
 
-  fprintf(ptd->texfp,"<svg width=\"%.2f\" height=\"%.2f\" ",
+  fprintf(ptd->texfp,"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.2f\" height=\"%.2f\" ",
           in2dots(ptd->width), in2dots(ptd->height));
   fprintf(ptd->texfp,"viewBox=\"0,0,%.2f,%.2f\">\n",
           in2dots(ptd->width), in2dots(ptd->height));
@@ -457,8 +457,8 @@ static void SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd)
 
       fprintf(ptd->texfp,"</svg>\n");
       if(ptd->xmlHeader)
-        fprintf(ptd->texfp,"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n");
-      fprintf(ptd->texfp,"<svg width=\"%.2f\" height=\"%.2f\" ",
+          fprintf(ptd->texfp,"<?xml version=\"1.0\"?>\n");
+      fprintf(ptd->texfp,"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%.2f\" height=\"%.2f\" ",
             in2dots(ptd->width), in2dots(ptd->height));
       fprintf(ptd->texfp,"viewBox=\"0,0,%.2f,%.2f\">\n",
             in2dots(ptd->width), in2dots(ptd->height));
