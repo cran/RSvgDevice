@@ -30,7 +30,6 @@
 
 #include "Rinternals.h"
 #include "Rgraphics.h"
-#include "Rdevices.h"
 #include "R_ext/GraphicsDevice.h"
 #include "R_ext/GraphicsEngine.h"
 
@@ -186,6 +185,9 @@ static void   SVG_Size(double *left, double *right,
                        double *bottom, double *top,
                        NewDevDesc *dd);
 
+static void   SVG_Resize(double *left, double *right,
+                         double *bottom, double *top,
+                         NewDevDesc *dd);
 static double SVG_StrWidth(char *str,
                            R_GE_gcontext *gc,
                            NewDevDesc *dd);
@@ -394,7 +396,7 @@ static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
   ptd->bg = dd->startfill;
   ptd->col = ptd->fg;
 
-  if (!( ptd->texfp = (FILE *) fopen(R_ExpandFileName(ptd->filename), "w") ))
+  if (!( ptd->texfp = (FILE *)R_fopen(R_ExpandFileName(ptd->filename), "w") ))
     return FALSE;
 
   if(ptd->xmlHeader)
@@ -420,6 +422,15 @@ static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
   return TRUE;
 }
 
+
+/* Interactive Resize */
+
+static void SVG_Resize(double *left, double *right,
+                       double *bottom, double *top,
+                       NewDevDesc *dd)
+{
+
+}
 
 static void SVG_Clip(double x0, double x1, double y0, double y1,
                      NewDevDesc *dd)
@@ -673,8 +684,8 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
 
     strcpy(ptd->filename, filename);
 
-    dd->startfill = R_GE_str2col(bg);
-    dd->startcol = R_GE_str2col(fg);
+    dd->startfill = Rf_str2col(bg);
+    dd->startcol = Rf_str2col(fg);
     dd->startps = 10;
     dd->startlty = 0;
     dd->startfont = 1;
@@ -763,7 +774,7 @@ static  GEDevDesc *RSvgDevice(char **file, char **bg, char **fg,
     R_CheckDeviceAvailable();
     BEGIN_SUSPEND_INTERRUPTS {
         if (!(dev = (NewDevDesc *) Calloc(1,NewDevDesc)))
-            error("unable to allocate memory for NewDevDesc");
+            return;
         /* Do this for early redraw attempts */
         dev->displayList = R_NilValue;
 
