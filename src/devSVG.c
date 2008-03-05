@@ -18,21 +18,25 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#define BEGIN_SUSPEND_INTERRUPTS
-#define END_SUSPEND_INTERRUPTS
 #include "R.h"
-#include "Rmath.h"
 #include "Rversion.h"
 
 #include "Rinternals.h"
-#include "Rgraphics.h"
-#include "Rdevices.h"
-#include "R_ext/GraphicsDevice.h"
 #include "R_ext/GraphicsEngine.h"
+
+#if R_VERSION < R_Version(2,7,0)
+# include "Rgraphics.h"
+# include "Rdevices.h"
+# include "R_ext/GraphicsDevice.h"
+typedef GEDevDesc* pGEDevDesc;
+typedef NewDevDesc* pDevDesc;
+typedef R_GE_gcontext* pGEcontext;
+#endif
+
+#ifndef BEGIN_SUSPEND_INTERRUPTS
+# define BEGIN_SUSPEND_INTERRUPTS
+# define END_SUSPEND_INTERRUPTS
+#endif
 
 /* device-specific information per SVG device */
 
@@ -158,45 +162,44 @@ static double charwidth[4][128] = {
 
 /* Device driver actions */
 
-static void   SVG_Activate(NewDevDesc *);
+static void   SVG_Activate(pDevDesc);
 static void   SVG_Circle(double x, double y, double r,
-                         R_GE_gcontext *gc,
-                         NewDevDesc *dd);
-static void   SVG_Clip(double, double, double, double, NewDevDesc*);
-static void   SVG_Close(NewDevDesc*);
-static void   SVG_Deactivate(NewDevDesc *);
-static void   SVG_Hold(NewDevDesc*);
+                         const pGEcontext gc,
+                         pDevDesc dd);
+static void   SVG_Clip(double, double, double, double, pDevDesc);
+static void   SVG_Close(pDevDesc);
+static void   SVG_Deactivate(pDevDesc);
 static void   SVG_Line(double x1, double y1, double x2, double y2,
-                       R_GE_gcontext *gc,
-                       NewDevDesc *dd);
-static Rboolean SVG_Locator(double*, double*, NewDevDesc*);
-static void   SVG_Mode(int, NewDevDesc*);
-static void   SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd);
-static Rboolean SVG_Open(NewDevDesc*, SVGDesc*);
+                       const pGEcontext gc,
+                       pDevDesc dd);
+static Rboolean SVG_Locator(double*, double*, pDevDesc);
+static void   SVG_Mode(int, pDevDesc);
+static void   SVG_NewPage(const pGEcontext gc, pDevDesc dd);
+static Rboolean SVG_Open(pDevDesc, SVGDesc*);
 static void   SVG_Polygon(int n, double *x, double *y,
-                          R_GE_gcontext *gc,
-                          NewDevDesc *dd);
+                          const pGEcontext gc,
+                          pDevDesc dd);
 static void   SVG_Polyline(int n, double *x, double *y,
-                           R_GE_gcontext *gc,
-                           NewDevDesc *dd);
+                           const pGEcontext gc,
+                           pDevDesc dd);
 static void   SVG_Rect(double x0, double y0, double x1, double y1,
-                       R_GE_gcontext *gc,
-                       NewDevDesc *dd);
+                       const pGEcontext gc,
+                       pDevDesc dd);
 static void   SVG_Size(double *left, double *right,
                        double *bottom, double *top,
-                       NewDevDesc *dd);
+                       pDevDesc dd);
 
-static double SVG_StrWidth(char *str,
-                           R_GE_gcontext *gc,
-                           NewDevDesc *dd);
-static void   SVG_Text(double x, double y, char *str,
+static double SVG_StrWidth(const char *str,
+                           const pGEcontext gc,
+                           pDevDesc dd);
+static void   SVG_Text(double x, double y, const char *str,
                        double rot, double hadj,
-                       R_GE_gcontext *gc,
-                       NewDevDesc *dd);
+                       const pGEcontext gc,
+                       pDevDesc dd);
 static void   SVG_MetricInfo(int c,
-                             R_GE_gcontext *gc,
+                             const pGEcontext gc,
                              double* ascent, double* descent,
-                             double* width, NewDevDesc *dd);
+                             double* width, pDevDesc dd);
 
 /* Support routines */
 
@@ -219,7 +222,7 @@ char *col2RGBname(unsigned int col)
 /*Thanks Paul*/
 static void SVG_Size(double *left, double *right,
                      double *bottom, double *top,
-                     NewDevDesc *dd)
+                     pDevDesc dd)
 {
      *left = dd->left;
      *right = dd->right;
@@ -227,46 +230,7 @@ static void SVG_Size(double *left, double *right,
      *top = dd->top;
 }
 
-/*Get Device point from user point*/
-/*void GetSvgDevicePoint(double x, double y)
- {
-   GEDevDesc *dd = GEcurrentDevice();
-
-   x = toDeviceX(x,
-   GConvert(x, y, GE_NDC, GE_DEVICE, dd);
-   }
-*/
-/*Get User Point from device point*/
-/*void GetSvgUserPoint(double x, double y)
-{
-  DevDesc *dd = GEcurrentDevice();
-  x = fromDeviceX(x
-  GConvert(x, y, GE_DEVICE, GE_NDC, dd);
-}
-*/
-/*Get Device points for an array of user points*/
-/*void GetSvgDevicePoints(double *x, double *y, int *n)
-{
-  int i;
-
-  GEDevDesc *dd = GEcurrentDevice();
-
-  for(i = 0; i < *n; i++){
-    GConvert(x+i,y+i, GE_NDC, DEVICE, dd);
-  }
-}
-*/
-/*Get Device Boundries i.e. Width & Height*/
-  /*void GetSvgDeviceBoundry(double *w, double *h)
-{
-  DevDesc *dd = CurrentDevice();
-  SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
-
-  *w = in2dots(ptd->width);
-  *h = in2dots(ptd->height);
-}
-*/
-static void SetLinetype(int newlty, int newlwd, NewDevDesc *dd, int
+static void SetLinetype(int newlty, int newlwd, pDevDesc dd, int
                         fgcol, int col)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
@@ -363,18 +327,18 @@ static void SetFont(int face, int size, SVGDesc *ptd)
 
 }
 
-static void SVG_Activate(NewDevDesc *dd)
+static void SVG_Activate(pDevDesc dd)
 {
 }
 
-static void SVG_Deactivate(NewDevDesc *dd)
+static void SVG_Deactivate(pDevDesc dd)
 {
 }
 
 static void SVG_MetricInfo(int c,
-                           R_GE_gcontext *gc,
+                           const pGEcontext gc,
                            double* ascent, double* descent,
-                           double* width, NewDevDesc *dd)
+                           double* width, pDevDesc dd)
 {
   /* metric information not available => return 0,0,0 */
   *ascent  = 0.0;
@@ -384,7 +348,7 @@ static void SVG_MetricInfo(int c,
 
 /* Initialize the device */
 
-static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
+static Rboolean SVG_Open(pDevDesc dd, SVGDesc *ptd)
 {
   ptd->fontsize = 0;
   ptd->fontface = 0;
@@ -422,7 +386,7 @@ static Rboolean SVG_Open(NewDevDesc *dd, SVGDesc *ptd)
 
 
 static void SVG_Clip(double x0, double x1, double y0, double y1,
-                     NewDevDesc *dd)
+                     pDevDesc dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -434,7 +398,7 @@ static void SVG_Clip(double x0, double x1, double y0, double y1,
 
         /* Start a new page */
 
-static void SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd)
+static void SVG_NewPage(const pGEcontext gc, pDevDesc dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -465,7 +429,7 @@ static void SVG_NewPage(R_GE_gcontext *gc, NewDevDesc *dd)
 
 /* Close down the driver */
 
-static void SVG_Close(NewDevDesc *dd)
+static void SVG_Close(pDevDesc dd)
 {
         SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -478,8 +442,8 @@ static void SVG_Close(NewDevDesc *dd)
 
 
 static void SVG_Line(double x1, double y1, double x2, double y2,
-                     R_GE_gcontext *gc,
-                     NewDevDesc *dd)
+                     const pGEcontext gc,
+                     pDevDesc dd)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -494,8 +458,8 @@ static void SVG_Line(double x1, double y1, double x2, double y2,
 }
 
 static void SVG_Polyline(int n, double *x, double *y,
-                         R_GE_gcontext *gc,
-                         NewDevDesc *dd)
+                         const pGEcontext gc,
+                         pDevDesc dd)
 {
   int i;
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
@@ -514,13 +478,13 @@ static void SVG_Polyline(int n, double *x, double *y,
 /* String Width in Rasters */
 /* For the current font in pointsize fontsize */
 
-static double SVG_StrWidth(char *str,
-                           R_GE_gcontext *gc,
-                           NewDevDesc *dd)
+static double SVG_StrWidth(const char *str,
+                           const pGEcontext gc,
+                           pDevDesc dd)
 {
     SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
-    char *p;
+    const char *p;
     int size;
     double sum;
     size =  gc->cex * gc->ps + 0.5;
@@ -535,8 +499,8 @@ static double SVG_StrWidth(char *str,
 
 /* Possibly Filled Rectangle */
 static void SVG_Rect(double x0, double y0, double x1, double y1,
-                     R_GE_gcontext *gc,
-                     NewDevDesc *dd)
+                     const pGEcontext gc,
+                     pDevDesc dd)
 {
   double tmp;
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
@@ -564,8 +528,8 @@ static void SVG_Rect(double x0, double y0, double x1, double y1,
 }
 
 static void SVG_Circle(double x, double y, double r,
-                       R_GE_gcontext *gc,
-                       NewDevDesc *dd)
+                       const pGEcontext gc,
+                       pDevDesc dd)
 {
   SVGDesc *ptd = (SVGDesc *) dd->deviceSpecific;
 
@@ -581,8 +545,8 @@ static void SVG_Circle(double x, double y, double r,
 }
 
 static void SVG_Polygon(int n, double *x, double *y,
-                        R_GE_gcontext *gc,
-                        NewDevDesc *dd)
+                        const pGEcontext gc,
+                        pDevDesc dd)
 {
   int i;
 
@@ -602,9 +566,8 @@ static void SVG_Polygon(int n, double *x, double *y,
   fprintf(ptd->texfp," />\n");
 }
 
-static void textext(char *str, SVGDesc *ptd)
+static void textext(const char *str, SVGDesc *ptd)
 {
-
     for( ; *str ; str++)
         switch(*str) {
 
@@ -619,10 +582,10 @@ static void textext(char *str, SVGDesc *ptd)
 
 /* Rotated Text */
 
-static void SVG_Text(double x, double y, char *str,
+static void SVG_Text(double x, double y, const char *str,
                      double rot, double hadj,
-                     R_GE_gcontext *gc,
-                     NewDevDesc *dd)
+                     const pGEcontext gc,
+                     pDevDesc dd)
 {
   int size;
 
@@ -646,23 +609,18 @@ static void SVG_Text(double x, double y, char *str,
 }
 
 /* Pick */
-static Rboolean SVG_Locator(double *x, double *y, NewDevDesc *dd)
+static Rboolean SVG_Locator(double *x, double *y, pDevDesc dd)
 {
     return FALSE;
 }
 
 
 /* Set Graphics mode - not needed for PS */
-static void SVG_Mode(int mode, NewDevDesc* dd)
+static void SVG_Mode(int mode, pDevDesc dd)
 {
 }
 
-/* GraphicsInteraction() for the Mac */
-static void SVG_Hold(NewDevDesc *dd)
-{
-}
-
-Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
+Rboolean SVGDeviceDriver(pDevDesc dd, char *filename, char *bg, char *fg,
                          double width, double height, Rboolean debug,
                          Rboolean xmlHeader, Rboolean onefile)
 {
@@ -680,11 +638,8 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
     dd->startfont = 1;
     dd->startgamma = 1;
 
-    dd->newDevStruct = 1;
-
     dd->activate = SVG_Activate;
     dd->deactivate = SVG_Deactivate;
-    dd->open = SVG_Open;
     dd->close = SVG_Close;
     dd->clip = SVG_Clip;
     dd->size = SVG_Size;
@@ -698,7 +653,6 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
     dd->polyline = SVG_Polyline;
     dd->locator = SVG_Locator;
     dd->mode = SVG_Mode;
-    dd->hold = SVG_Hold;
     dd->metricInfo = SVG_MetricInfo;
 
     /* Screen Dimensions in Pixels */
@@ -734,10 +688,6 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
     /* We use printer points, i.e. 72.27 dots per inch : */
     dd->ipr[0] = dd->ipr[1] = 1./DOTSperIN;
 
-    dd->canResizePlot = FALSE;
-    dd->canChangeFont = TRUE;
-    dd->canRotateText = TRUE;
-    dd->canResizeText = TRUE;
     dd->canClip = FALSE;
     dd->canHAdj = 0;
     dd->canChangeGamma = FALSE;
@@ -751,32 +701,34 @@ Rboolean SVGDeviceDriver(NewDevDesc *dd, char *filename, char *bg, char *fg,
     return TRUE;
 }
 
-static  GEDevDesc *RSvgDevice(char **file, char **bg, char **fg,
+static pGEDevDesc RSvgDevice(char **file, char **bg, char **fg,
                               double *width, double *height, int *debug,
                               int *xmlHeader, int *onefile)
 {
-    GEDevDesc *dd;
-    NewDevDesc *dev;
+    pGEDevDesc dd;
+    pDevDesc dev;
 
     if(debug[0] == NA_LOGICAL) debug = FALSE;
 
+    R_GE_checkVersionOrDie(R_GE_version);
     R_CheckDeviceAvailable();
     BEGIN_SUSPEND_INTERRUPTS {
-        if (!(dev = (NewDevDesc *) Calloc(1,NewDevDesc)))
+        if (!(dev = (pDevDesc) Calloc(1,NewDevDesc)))
             error("unable to allocate memory for NewDevDesc");
-        /* Do this for early redraw attempts */
-        dev->displayList = R_NilValue;
 
         if(!SVGDeviceDriver(dev, file[0], bg[0], fg[0], width[0], height[0], debug[0],xmlHeader[0],onefile[0])) {
             free(dev);
             error("unable to start device SVG");
         }
-        gsetVar(install(".Device"), mkString("devSVG"), R_NilValue);
         dd = GEcreateDevDesc(dev);
-        dd->newDevStruct = 1;
-        Rf_addDevice((DevDesc*) dd);
-        GEinitDisplayList(dd);
 
+#if R_VERSION < R_Version(2,7,0)
+        gsetVar(install(".Device"), mkString("devSVG"), R_NilValue);
+	Rf_addDevice((DevDesc*) dd);
+#else
+        GEaddDevice2(dd, "devSVG");
+#endif
+        GEinitDisplayList(dd);
     } END_SUSPEND_INTERRUPTS;
 
     return(dd);
