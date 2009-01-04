@@ -33,6 +33,12 @@ typedef NewDevDesc* pDevDesc;
 typedef R_GE_gcontext* pGEcontext;
 #endif
 
+#if R_VERSION >= R_Version(2,8,0)
+#ifndef NewDevDesc
+#define NewDevDesc DevDesc
+#endif
+#endif
+
 #ifndef BEGIN_SUSPEND_INTERRUPTS
 # define BEGIN_SUSPEND_INTERRUPTS
 # define END_SUSPEND_INTERRUPTS
