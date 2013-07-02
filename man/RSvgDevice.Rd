@@ -1,7 +1,8 @@
 \name{devSVG}
 \encoding{UTF-8}
 \title{A SVG Graphics Driver}
-\usage{devSVG(file = "Rplots.svg", width = 10, height = 8, bg = "white", fg = "black", onefile=TRUE, xmlHeader=TRUE)
+\usage{devSVG(file = "Rplots.svg", width = 10, height = 8, 
+bg = "white", fg = "black", onefile=TRUE, xmlHeader=TRUE)
 }
 \alias{devSVG}
 \arguments{
@@ -39,7 +40,7 @@
 \examples{
 library(RSvgDevice)
 devSVG()
-plot(1:11,(-5:5)^2, type='b', main="Simple Example Plot with XML-reserved and UTF-8 chars like & é à ç and <.")
+plot(1:11,(-5:5)^2, type='b', main="Simple Example")
 dev.off()
 }
 \keyword{device}
